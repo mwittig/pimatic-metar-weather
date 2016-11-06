@@ -1,0 +1,54 @@
+{
+  "name": "pimatic-metar-weather",
+  "description": "Pimatic plugin to obtain weather data from METAR reports",
+  "author": {
+    "name": "Marcus Wittig",
+    "url": "https://github.com/mwittig"
+  },
+  "main": "metar-weather",
+  "icon": "assets/images/logo.svg",
+  "files": [
+    "assets",
+    "metar-weather.coffee",
+    "metar-weather-config-schema.coffee",
+    "device-config-schema.coffee",
+    "LICENSE",
+    "HISTORY.md",
+    "README.md"
+  ],
+  "keywords": [
+    "Weather",
+    "Metar",
+    "Pimatic"
+  ],
+  "version": "0.0.0",
+  "homepage": "https://github.com/mwittig/pimatic-metar-weather/tree/master",
+  "private": false,
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/mwittig/pimatic-metar-weather.git"
+  },
+  "bugs": {
+    "url": "https://github.com/mwittig/pimatic-metar-weather/issues"
+  },
+  "license": "AGPL-3.0",
+  "maintainers": [
+    {
+      "name": "mwittig",
+      "url": "https://github.com/mwittig"
+    }
+  ],
+  "configSchema": "metar-weather-config-schema.coffee",
+  "dependencies": {
+    "pimatic-plugin-commons": "^0.9.3",
+    "restler-promise": "0.0.5"
+  },
+  "optionalDependencies": {},
+  "peerDependencies": {
+    "pimatic": ">=0.9.0 <1.0.0"
+  },
+  "engines": {
+    "node": ">0.8.x",
+    "npm": ">1.1.x"
+  }
+}
