@@ -6,7 +6,6 @@
     "url": "https://github.com/mwittig"
   },
   "main": "metar-weather",
-  "icon": "assets/images/logo.svg",
   "files": [
     "assets",
     "metar-weather.coffee",
@@ -21,7 +20,7 @@
     "Metar",
     "Pimatic"
   ],
-  "version": "0.0.0",
+  "version": "0.9.0",
   "homepage": "https://github.com/mwittig/pimatic-metar-weather/tree/master",
   "private": false,
   "repository": {
