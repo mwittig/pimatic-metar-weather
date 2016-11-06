@@ -4,7 +4,7 @@ module.exports = {
     title: "Metar Weather"
     description: "Metar Weather Data"
     type: "object"
-    extensions: ["xLink", "xPresentLabel", "xAbsentLabel"]
+    extensions: ["xLink", "xAttributeOptions"]
     properties:
       stationCode:
         description: "4-letter station code for the weather station"
