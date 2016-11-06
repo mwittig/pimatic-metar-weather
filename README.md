@@ -22,7 +22,7 @@ Currently, the plugin is able to provide data for
 * wind speed, direction, and gust
 * generalized cloud cover in percent based on octas where cover for different heights is accumulated
  
-# Future work
+## Future work
 
 There are a couple of things on my list:
 
@@ -55,7 +55,7 @@ The plugin has the following configuration properties:
 
 ![Screenshot](https://raw.githubusercontent.com/mwittig/pimatic-metar-weather/master/assets/screenshots/metar-weather.png)
 
-The Metar Weather is provided to obtain weather data for a single location. 
+The Metar Weather device is provided to obtain weather data for a single location. 
 
     {
           "id": "metar-1",
@@ -76,6 +76,7 @@ The Metar Weather is provided to obtain weather data for a single location.
     }
     
 The location is identified by four letter station code. It can be looked up as follows: 
+
 * [Europe](http://en.allmetsat.com/metar-taf/europe.php)
 * [Africa](http://en.allmetsat.com/metar-taf/africa.php)
 * [North America](http://en.allmetsat.com/metar-taf/north-america.php)
@@ -91,6 +92,7 @@ The device has the following configuration properties:
 | stationCode       | -        | String  | The 4-letter station code for the weather station |
 | attributes        | "temperature" | Enum | The attribute to be exhibited by the device |
 
-Links
+## Links
+
 * [Listing of METAR Stations](https://aviationweather.gov/docs/metar/stations.txt)
 * [ICAO](http://www.icao.int/Pages/default.aspx)
