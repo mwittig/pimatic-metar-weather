@@ -21,15 +21,17 @@ Currently, the plugin is able to provide data for
 * barometric pressure
 * wind speed, direction, and gust
 * generalized cloud cover in percent based on octas where cover for different heights is accumulated
+* precipitation (rain and snow if available)
  
 ## Future work
 
 There are a couple of things on my list:
 
-* add information on precipitation (rain and snow if available)
+* ~~add information on precipitation (rain and snow if available)~~
 * add switch to support imperial measures
 * provide a textual report on visibility, clouds and precipitation
 * add support for TAF forecasts
+* localization
 
 ## Contributions
 

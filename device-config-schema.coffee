@@ -14,7 +14,8 @@ module.exports = {
         default: ["temperature"]
         format: "table"
         items:
-          enum: ["temperature", "dewPoint", "humidity", "pressure", "windSpeed", "windDirection", "windGust", "clouds"]
+          enum: ["temperature", "dewPoint", "humidity", "pressure", "windSpeed",
+            "windDirection", "windGust", "clouds", "precipitation"]
       interval:
         description: "The time interval in minutes (minimum 30) at which the report will be queried"
         type: "number"

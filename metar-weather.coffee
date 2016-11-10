@@ -71,6 +71,10 @@ module.exports = (env) ->
         type: types.number
         unit: '%'
         acronym: 'CLOUDS'
+      precipitation:
+        description: "Precipitation"
+        type: types.string
+        acronym: 'PPT'
 
     constructor: (@config, @plugin, lastState) ->
       @id = @config.id
@@ -80,9 +84,11 @@ module.exports = (env) ->
       @base = commons.base @, @config.class
       @attributeValues = new AttributeContainer()
       @attributes = _.cloneDeep(@attributes)
+      @attributeHash = {}
       for attributeName in @config.attributes
         do (attributeName) =>
           if attributeTemplates.hasOwnProperty attributeName
+            @attributeHash[attributeName] = true
             properties = attributeTemplates[attributeName]
             @attributes[attributeName] =
               description: properties.description
@@ -93,11 +99,11 @@ module.exports = (env) ->
             defaultValue = if properties.type is types.number then 0.0 else '-'
             @attributeValues.values[attributeName] = lastState?[attributeName]?.value or defaultValue
 
-            @attributeValues.on properties.key, ((value) =>
-              @base.debug "Received update for property #{properties.key}: #{value}"
-              if value.value?
-                @attributeValues.values[attributeName] = value.value
-                @emit attributeName, value.value
+            @attributeValues.on attributeName, ((value) =>
+              @base.debug "Received update for attribute #{attributeName}: #{value}"
+              if value?
+                @attributeValues.values[attributeName] = value
+                @emit attributeName, value
             )
 
             @_createGetter(attributeName, =>
@@ -149,6 +155,54 @@ module.exports = (env) ->
       else
         return '-'
 
+    skyConditionsToClouds: (conditions) ->
+      clouds = 0
+      for condition in conditions
+        c = @skyConditionToPercentage condition.$.sky_cover
+        if  c > clouds
+          clouds = c
+      return clouds
+
+    weatherToPrecipitation: (weather) ->
+      conditions =
+        "-": "light"
+        "+": "heavy"
+        VC: "in the vicinity"
+        MI: "shallow"
+        PR: "partial"
+        BC: "patches"
+        DR: "low drifting"
+        BL: "blowing"
+        SH: "showers"
+        TS: "thunderstorm"
+        FZ: "freezing"
+        RA: "rain"
+        DZ: "drizzle"
+        SN: "snow"
+        SG: "snow grains"
+        IC: "ice crystals"
+        PL: "ice pellets"
+        GR: "hail"
+        GS: "small hail"
+        UP: "unknown precipitation"
+
+      condition = []
+      if weather?
+        offset = 0
+        while offset < weather.length
+          for own key, value of conditions
+            if weather.startsWith key, offset
+              condition.push value
+              offset += key.length - 1
+              break
+          offset += 1
+
+      unless condition.length is 0
+        return condition.join ' '
+      else
+        return 'none'
+
+
     transformWindDirection: (value) ->
       direction =
         VRB: 0
@@ -172,7 +226,7 @@ module.exports = (env) ->
 
       for own k, v of direction
         if value < v or value is 0
-          return k.replace 2
+          return k.replace 2, ''
       return '-'
 
     knotsToMetersPerSecond: (knots) ->
@@ -196,29 +250,39 @@ module.exports = (env) ->
           @base.debug "Response: #{JSON.stringify(result.data)}" if result.data?
           if result.data?.response?.data?[0]?.METAR?[0]?
             data = result.data.response.data[0].METAR[0]
-            @base.debug data
-            @emit "temperature", parseFloat(data.temp_c) if data.temp_c?
-            if data.dewpoint_c?
-              dt = parseFloat(data.dewpoint_c)
-              @emit "dewPoint", dt
-              @emit "humidity", @calculateRelativeHumidity dt, parseFloat(data.temp_c) if data.temp_c?
-            @emit "windSpeed", @knotsToMetersPerSecond parseFloat(data.wind_speed_kt) if data.wind_speed_kt?
-            @emit "windGust", @knotsToMetersPerSecond parseFloat(data.wind_gust_kt) if data.wind_gust_kt?
-            @emit "windDirection", @transformWindDirection parseFloat(data.wind_dir_degrees) if data.wind_dir_degrees?
-            @emit "pressure", @inHgToMillibar parseFloat(data.altim_in_hg) if data.altim_in_hg?
-            if data.sky_condition? and _.isArray data.sky_condition
-              clouds = 0
-              cover = 'CLR'
-              for condition in data.sky_condition
-                p = @skyConditionToPercentage condition.$.sky_cover
-                if clouds < p
-                  clouds = p
-                  cover = condition.$.sky_cover
-              @emit "clouds", clouds
-#          if query.resultCode(result.data) is 0
-#            resolve result.data
-#          else
-#            throw new Error "Command #{command} failed with return code #{query.resultCode result.data}"
+
+            if @attributeHash.temperature? and _.isArray(data.temp_c)
+              @attributeValues.emit "temperature", parseFloat(data.temp_c)
+
+            if @attributeHash.dewPoint? and _.isArray(data.dewpoint_c)
+              @attributeValues.emit "dewPoint", parseFloat(data.dewpoint_c)
+
+            if @attributeHash.humidity? and _.isArray(data.temp_c) and _.isArray(data.dewpoint_c)
+              @attributeValues.emit "humidity", @calculateRelativeHumidity parseFloat(data.dewpoint_c), parseFloat(data.temp_c)
+
+            if @attributeHash.windSpeed? and _.isArray(data.wind_speed_kt)
+              @attributeValues.emit "windSpeed", @knotsToMetersPerSecond parseFloat(data.wind_speed_kt)
+
+            if @attributeHash.windGust? and _.isArray(data.wind_gust_kt)
+              @attributeValues.emit "windGust", @knotsToMetersPerSecond parseFloat(data.wind_gust_kt)
+
+            if @attributeHash.windDirection? and _.isArray(data.wind_dir_degrees)
+              @attributeValues.emit "windDirection", @transformWindDirection parseFloat(data.wind_dir_degrees)
+
+            if @attributeHash.pressure? and _.isArray(data.altim_in_hg)
+              @attributeValues.emit "pressure", @inHgToMillibar parseFloat(data.altim_in_hg)
+
+            if @attributeHash.clouds? and _.isArray data.sky_condition
+              @attributeValues.emit "clouds", @skyConditionsToClouds data.sky_condition
+
+            if @attributeHash.precipitation?
+              if _.isArray data.wx_string
+                @attributeValues.emit "precipitation", @weatherToPrecipitation(data.wx_string.join ' ')
+              else
+                @attributeValues.emit "precipitation", "none"
+          else
+            throw new Error "Response does not contain metar"
+
         .catch (errorResult) =>
           reject if errorResult instanceof Error then errorResult else errorResult.error
         .finally () =>
