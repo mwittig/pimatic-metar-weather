@@ -1,4 +1,4 @@
-# Yamaha AVR plugin
+# metar weather plugin
 module.exports = (env) ->
 
   events = require 'events'
