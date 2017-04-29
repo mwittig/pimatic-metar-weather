@@ -1,5 +1,7 @@
 # pimatic-metar-weather
 
+[![Greenkeeper badge](https://badges.greenkeeper.io/mwittig/pimatic-metar-weather.svg)](https://greenkeeper.io/)
+
 [![Npm Version](https://badge.fury.io/js/pimatic-metar-weather.svg)](http://badge.fury.io/js/pimatic-metar-weather)
 [![Build Status](https://travis-ci.org/mwittig/pimatic-metar-weather.svg?branch=master)](https://travis-ci.org/mwittig/pimatic-metar-weather)
 [![Dependency Status](https://david-dm.org/mwittig/pimatic-metar-weather.svg)](https://david-dm.org/mwittig/pimatic-metar-weather)
