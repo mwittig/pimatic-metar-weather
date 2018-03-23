@@ -7,6 +7,7 @@ module.exports = (env) ->
   _ = env.require 'lodash'
   commons = require('pimatic-plugin-commons')(env)
   rest = require('restler-promise')(Promise)
+  moment = require 'moment-timezone'
 
 
   # ###MetarWeatherPlugin class
@@ -22,13 +23,18 @@ module.exports = (env) ->
         createCallback: (config, lastState) =>
           return new MetarWeather(config, @, lastState)
       })
+      @framework.deviceManager.registerDeviceClass("MetarWeatherTimeBased", {
+        configDef: deviceConfigDef.MetarWeatherTimeBased,
+        createCallback: (config, lastState) =>
+          return new MetarWeatherTimeBased(config, @, lastState)
+      })
 
   class AttributeContainer extends events.EventEmitter
     constructor: () ->
       @values = {}
 
   class MetarWeather extends env.devices.Device
-    attributeTemplates =
+    @attributeTemplates =
       status:
         description: "The actual status"
         type: types.string
@@ -75,6 +81,10 @@ module.exports = (env) ->
         description: "Precipitation"
         type: types.string
         acronym: 'PPT'
+      observationTime:
+        description: "UTC time stamp of the observation record"
+        type: types.string
+        acronym: 'OT'
 
     constructor: (@config, @plugin, lastState) ->
       @id = @config.id
@@ -87,9 +97,9 @@ module.exports = (env) ->
       @attributeHash = {}
       for attributeName in @config.attributes
         do (attributeName) =>
-          if attributeTemplates.hasOwnProperty attributeName
+          if MetarWeather.attributeTemplates.hasOwnProperty attributeName
             @attributeHash[attributeName] = true
-            properties = attributeTemplates[attributeName]
+            properties = MetarWeather.attributeTemplates[attributeName]
             @attributes[attributeName] =
               description: properties.description
               type: properties.type
@@ -114,7 +124,8 @@ module.exports = (env) ->
       super()
       if @config.stationCode?
         baseUrl = 'https://aviationweather.gov/adds/dataserver_current/httpparam?dataSource=metars&requestType=retrieve&format=xml'
-        @weatherUrl = "#{baseUrl}&stationString=#{@config.stationCode}&hoursBeforeNow=3&mostRecent=true"
+        @weatherUrl = "#{baseUrl}&stationString=#{@config.stationCode}"
+        @defaultQuery = "&hoursBeforeNow=3&mostRecent=true"
         @requestWeatherData()
 
     destroy: () ->
@@ -242,53 +253,157 @@ module.exports = (env) ->
       Math.round 100 * Math.exp((17.625*td)/(243.04+td)) / Math.exp((17.625*t)/(243.04+t))
 
     requestWeatherData: () =>
-      return new Promise (resolve, reject) =>
-        rest.get(@weatherUrl, {
-          parser: rest.restler.parsers.xml
-        })
-        .then (result) =>
-          @base.debug "Response: #{JSON.stringify(result.data)}" if result.data?
-          if result.data?.response?.data?[0]?.METAR?[0]?
-            data = result.data.response.data[0].METAR[0]
+      rest.get(@weatherUrl + @defaultQuery, {
+        parser: rest.restler.parsers.xml
+      })
+      .then (result) =>
+        @base.debug "Response: #{JSON.stringify(result.data)}" if result.data?
+        if result.data?.response?.data?[0]?.METAR?[0]?
+          data = result.data.response.data[0].METAR[0]
 
-            if @attributeHash.temperature? and _.isArray(data.temp_c)
-              @attributeValues.emit "temperature", parseFloat(data.temp_c)
+          if @attributeHash.observationTime? and _.isArray(data.observation_time)
+            @attributeValues.emit "observationTime", data.observation_time[0]
 
-            if @attributeHash.dewPoint? and _.isArray(data.dewpoint_c)
-              @attributeValues.emit "dewPoint", parseFloat(data.dewpoint_c)
+          if @attributeHash.temperature? and _.isArray(data.temp_c)
+            @attributeValues.emit "temperature", parseFloat(data.temp_c)
 
-            if @attributeHash.humidity? and _.isArray(data.temp_c) and _.isArray(data.dewpoint_c)
-              @attributeValues.emit "humidity", @calculateRelativeHumidity parseFloat(data.dewpoint_c), parseFloat(data.temp_c)
+          if @attributeHash.dewPoint? and _.isArray(data.dewpoint_c)
+            @attributeValues.emit "dewPoint", parseFloat(data.dewpoint_c)
 
-            if @attributeHash.windSpeed? and _.isArray(data.wind_speed_kt)
-              @attributeValues.emit "windSpeed", @knotsToMetersPerSecond parseFloat(data.wind_speed_kt)
+          if @attributeHash.humidity? and _.isArray(data.temp_c) and _.isArray(data.dewpoint_c)
+            @attributeValues.emit "humidity", @calculateRelativeHumidity parseFloat(data.dewpoint_c), parseFloat(data.temp_c)
 
-            if @attributeHash.windGust? and _.isArray(data.wind_gust_kt)
-              @attributeValues.emit "windGust", @knotsToMetersPerSecond parseFloat(data.wind_gust_kt)
+          if @attributeHash.windSpeed? and _.isArray(data.wind_speed_kt)
+            @attributeValues.emit "windSpeed", @knotsToMetersPerSecond parseFloat(data.wind_speed_kt)
 
-            if @attributeHash.windDirection? and _.isArray(data.wind_dir_degrees)
-              @attributeValues.emit "windDirection", @transformWindDirection parseFloat(data.wind_dir_degrees)
+          if @attributeHash.windGust? and _.isArray(data.wind_gust_kt)
+            @attributeValues.emit "windGust", @knotsToMetersPerSecond parseFloat(data.wind_gust_kt)
 
-            if @attributeHash.pressure? and _.isArray(data.altim_in_hg)
-              @attributeValues.emit "pressure", @inHgToMillibar parseFloat(data.altim_in_hg)
+          if @attributeHash.windDirection? and _.isArray(data.wind_dir_degrees)
+            @attributeValues.emit "windDirection", @transformWindDirection parseFloat(data.wind_dir_degrees)
 
-            if @attributeHash.clouds? and _.isArray data.sky_condition
-              @attributeValues.emit "clouds", @skyConditionsToClouds data.sky_condition
+          if @attributeHash.pressure? and _.isArray(data.altim_in_hg)
+            @attributeValues.emit "pressure", @inHgToMillibar parseFloat(data.altim_in_hg)
 
-            if @attributeHash.precipitation?
-              if _.isArray data.wx_string
-                @attributeValues.emit "precipitation", @weatherToPrecipitation(data.wx_string.join ' ')
-              else
-                @attributeValues.emit "precipitation", "none"
-          else
-            throw new Error "Response does not contain metar"
+          if @attributeHash.clouds? and _.isArray data.sky_condition
+            @attributeValues.emit "clouds", @skyConditionsToClouds data.sky_condition
 
-        .catch (errorResult) =>
-          reject if errorResult instanceof Error then errorResult else errorResult.error
-        .finally () =>
-          @base.scheduleUpdate @requestWeatherData, @interval
+          if @attributeHash.precipitation?
+            if _.isArray data.wx_string
+              @attributeValues.emit "precipitation", @weatherToPrecipitation(data.wx_string.join ' ')
+            else
+              @attributeValues.emit "precipitation", "none"
+        else
+          throw new Error "Response does not contain metar"
 
-  # ###Finally
+      .catch (errorResult) =>
+        @base.error if errorResult instanceof Error then errorResult else errorResult.error
+      .finally () =>
+        @base.scheduleUpdate @requestWeatherData, @interval
+
+  class MetarWeatherTimeBased extends MetarWeather
+    constructor: (@config, @plugin, lastState) ->
+      @localTimezone = @config.localTimezone.trim().replace(/\ /g , "_")
+      @localTimezone = moment.tz.guess() if @localTimezone is ""
+      @targetTimezone = @config.targetTimezone.trim().replace(/\ /g , "_")
+      @localUtcOffset = parseInt(@config.localUtcOffset) * -1
+      @targetUtcOffset = parseInt(@config.targetUtcOffset) * -1
+      super(@config, @plugin, lastState)
+
+    destroy: () ->
+      super()
+
+    _getTimezoneOffsetString: (offset) ->
+      sign = '+'
+      if offset < 0
+        sign = '-'
+        offset *= -1
+      hours = '0' + Math.floor(offset).toString()
+      minutes = '0' + (Math.round(offset % 1 * 60)).toString()
+      sign + hours.substr(hours.length - 2) + minutes.substr(minutes.length - 2)
+
+    requestWeatherData: () =>
+      baseTime =
+        moment.utc(moment().tz(@localTimezone).utcOffset(@localUtcOffset, true)).format("YYYY-MM-DDTHH:mm:ss")
+      targetTimezoneOffset =
+        moment.tz.zone(@targetTimezone).parse(Date.UTC()) + @targetUtcOffset * 60
+
+      targetZoneOffset = @_getTimezoneOffsetString(targetTimezoneOffset / -60)
+      refDate = new Date(moment(baseTime + targetZoneOffset).tz('UTC').format())
+      if targetTimezoneOffset > 0
+        hoursBeforeNow = Math.round(targetTimezoneOffset / 60) + 24
+        # a positive offset means time at the target is behind the local time
+        # this we need to take the measurement data of the previous day
+        refDate.setDate(refDate.getDate() - 1)
+      else
+        hoursBeforeNow = Math.round(Math.abs(targetTimezoneOffset) / 60)
+
+      @base.debug "refDate=#{refDate.toISOString()}; targetTimezoneOffset=#{targetTimezoneOffset}"
+      @base.debug "hoursBeforeNow=#{hoursBeforeNow}; baseTime=#{baseTime}"
+      rest.get(@weatherUrl + "&hoursBeforeNow=#{hoursBeforeNow}", {
+        parser: rest.restler.parsers.xml
+      })
+      .then (result) =>
+        #@base.debug "Response: #{JSON.stringify(result.data)}" if result.data?
+        if result.data?.response?.data?[0]?.METAR?[0]?
+          # obtain the data record with the observation time which is closest to the refDate
+          dataPoints = result.data.response.data[0].METAR
+          bestDate = dataPoints.length
+          bestDiff = -(new Date(0,0,0)).valueOf()
+          currDiff = 0
+          for item, index in dataPoints
+            currDiff = Math.abs(new Date(dataPoints[index].observation_time[0]) - refDate);
+            if currDiff < bestDiff
+              bestDate = index
+              bestDiff = currDiff
+
+          data = result.data.response.data[0].METAR[bestDate]
+
+          if _.isArray(data.observation_time)
+            @base.debug "Using observation data record #{bestDate}
+              filed at #{data.observation_time[0]}"
+
+            if @attributeHash.observationTime?
+              @attributeValues.emit "observationTime", data.observation_time[0]
+
+          if @attributeHash.temperature? and _.isArray(data.temp_c)
+            @attributeValues.emit "temperature", parseFloat(data.temp_c)
+
+          if @attributeHash.dewPoint? and _.isArray(data.dewpoint_c)
+            @attributeValues.emit "dewPoint", parseFloat(data.dewpoint_c)
+
+          if @attributeHash.humidity? and _.isArray(data.temp_c) and _.isArray(data.dewpoint_c)
+            @attributeValues.emit "humidity", @calculateRelativeHumidity parseFloat(data.dewpoint_c), parseFloat(data.temp_c)
+
+          if @attributeHash.windSpeed? and _.isArray(data.wind_speed_kt)
+            @attributeValues.emit "windSpeed", @knotsToMetersPerSecond parseFloat(data.wind_speed_kt)
+
+          if @attributeHash.windGust? and _.isArray(data.wind_gust_kt)
+            @attributeValues.emit "windGust", @knotsToMetersPerSecond parseFloat(data.wind_gust_kt)
+
+          if @attributeHash.windDirection? and _.isArray(data.wind_dir_degrees)
+            @attributeValues.emit "windDirection", @transformWindDirection parseFloat(data.wind_dir_degrees)
+
+          if @attributeHash.pressure? and _.isArray(data.altim_in_hg)
+            @attributeValues.emit "pressure", @inHgToMillibar parseFloat(data.altim_in_hg)
+
+          if @attributeHash.clouds? and _.isArray data.sky_condition
+            @attributeValues.emit "clouds", @skyConditionsToClouds data.sky_condition
+
+          if @attributeHash.precipitation?
+            if _.isArray data.wx_string
+              @attributeValues.emit "precipitation", @weatherToPrecipitation(data.wx_string.join ' ')
+            else
+              @attributeValues.emit "precipitation", "none"
+        else
+          throw new Error "Response does not contain metar"
+
+      .catch (errorResult) =>
+        @base.error if errorResult instanceof Error then errorResult else errorResult.error
+      .finally () =>
+        @base.scheduleUpdate @requestWeatherData, @interval
+
+        # ###Finally
   # Create a instance of my plugin
   # and return it to the framework.
   return new MetarWeatherPlugin
