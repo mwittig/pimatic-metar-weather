@@ -23,6 +23,9 @@ Currently, the plugin is able to provide data for
 * wind speed, direction, and gust
 * generalized cloud cover in percent based on octas where cover for different heights is accumulated
 * precipitation (rain and snow if available)
+
+Additionally, it possible to obtain the observation time, that is the UTC time stamp at which the measured data 
+has been recorded.
  
 ## Future work
 
@@ -55,6 +58,8 @@ The plugin has the following configuration properties:
 
 
 ## Device Configuration
+
+### MetarWeather Device Type
 
 ![Screenshot](https://raw.githubusercontent.com/mwittig/pimatic-metar-weather/master/assets/screenshots/metar-weather.png)
 
@@ -94,6 +99,26 @@ The device has the following configuration properties:
 | interval          | 30       | Number  | The data acquisition time interval in minutes (minimum 30) |
 | stationCode       | -        | String  | The 4-letter station code for the weather station |
 | attributes        | "temperature" | Enum | The attribute to be exhibited by the device |
+
+### MetarWeatherTimeBased Device Type
+
+This device type has the same configuration properties as `MetarWeather` and provides additional properties to query the
+weather data at the given local time of day being transformed to a given target timezone. In other words, it is 
+possible to get the weather data at the same time of day in the target timezone as the local time of day.
+
+Depending on the timezones used the current time of day in the target timezone may be less than requested time of 
+day. In this case the data of the previous day will be used. If daylight savings shall be ignored it is suggested to
+use universal time `UTC` along with a given offset time. The following configuration properties are provided:
+
+| Property          | Default  | Type    | Description                                 |
+|:------------------|:---------|:--------|:--------------------------------------------|
+| interval          | 30       | Number  | The data acquisition time interval in minutes (minimum 30) |
+| stationCode       | -        | String  | The 4-letter station code for the weather station |
+| attributes        | "temperature" | Enum | The attribute to be exhibited by the device |
+| localTimezone     | ""       | String  | The local time zone to be applied. If empty the timezone derived from the system will be used |
+| localUtcOffset    | 0        | Number  | Local timezone offset to be added localTimezone. Useful if local timezone is UTC |
+| targetTimezone    | "UTC     | String  | The target time zone to be applied. If the timezone is running behind UTC the data of the previous day will be used |
+| targetUtcOffset   | 0        | Number  | Target timezone offset to be added targetTimezone. Useful if target timezone is UTC |
 
 ## Links
 
