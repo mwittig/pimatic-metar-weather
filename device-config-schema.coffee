@@ -36,7 +36,7 @@ module.exports = {
         type: "string"
         default: ""
       localUtcOffset:
-        description: "Local timezone offset to be added localTimezone. Useful if target timezone is UTC"
+        description: "Local timezone offset to be added localTimezone. Useful if local timezone is UTC"
         type: "number"
         default: 0
       targetTimezone:
