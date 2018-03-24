@@ -20,7 +20,7 @@
     "Metar",
     "Pimatic"
   ],
-  "version": "0.9.1",
+  "version": "0.9.2",
   "homepage": "https://github.com/mwittig/pimatic-metar-weather/tree/master",
   "private": false,
   "repository": {
