@@ -41,7 +41,7 @@
   "dependencies": {
     "moment-timezone": "^0.5.14",
     "pimatic-plugin-commons": "^0.9.7",
-    "restler-promise": "0.0.9"
+    "restler-promise": "0.0.10"
   },
   "optionalDependencies": {},
   "peerDependencies": {
