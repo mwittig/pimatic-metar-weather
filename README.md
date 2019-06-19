@@ -124,3 +124,9 @@ use universal time `UTC` along with a given offset time. The following configura
 
 * [Listing of METAR Stations](https://aviationweather.gov/docs/metar/stations.txt)
 * [ICAO](http://www.icao.int/Pages/default.aspx)
+
+## License
+
+Copyright (c) 2015-2019, Marcus Wittig and contributors. All rights reserved.
+
+[AGPL-3.0](https://github.com/mwittig/pimatic-metar-weather/blob/master/LICENSE)
