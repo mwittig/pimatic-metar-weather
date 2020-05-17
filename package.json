@@ -39,7 +39,7 @@
   ],
   "configSchema": "metar-weather-config-schema.coffee",
   "dependencies": {
-    "moment-timezone": "^0.5.14",
+    "moment-timezone": "^0.5.31",
     "pimatic-plugin-commons": "^0.9.10",
     "restler-promise": "0.0.10"
   },
