@@ -123,7 +123,7 @@ module.exports = (env) ->
             @base.error "Configuration Error. No such attribute: #{attributeName} - skipping."
       super()
       if @config.stationCode?
-        baseUrl = 'https://aviationweather.gov/adds/dataserver_current/httpparam?dataSource=metars&requestType=retrieve&format=xml'
+        baseUrl = 'https://aviationweather.gov/cgi-bin/data/dataserver.php?dataSource=metars&requestType=retrieve&format=xml'
         @weatherUrl = "#{baseUrl}&stationString=#{@config.stationCode}"
         @defaultQuery = "&hoursBeforeNow=3&mostRecent=true"
         @requestWeatherData()
